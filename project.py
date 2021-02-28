@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+import random
 from math import cos, sin, radians
 
 
@@ -37,12 +38,12 @@ class Laser(pygame.sprite.Sprite):
         self.image.set_colorkey(-1)
         self.rect = self.image.get_rect()
         self.angle = angle
-        self.rect.x = pos_x  # + self.width * cos(radians(self.angle))
-        self.rect.y = pos_y  # + self.height * sin(radians(self.angle))
+        self.rect.x = pos_x
+        self.rect.y = pos_y
         self.image = pygame.transform.rotate(self.image, self.angle + 180)
         self.image.set_colorkey(-1)
-        self.ax = 70 * cos(radians(self.angle))
-        self.ay = 70 * -sin(radians(self.angle))
+        self.vx = 70 * cos(radians(self.angle))
+        self.vy = 70 * -sin(radians(self.angle))
         self.timer = 0
 
     def moving(self):
@@ -57,7 +58,7 @@ class Laser(pygame.sprite.Sprite):
         self.timer += 1
         if self.timer >= FPS * 0.5:
             self.kill()
-        self.rect = self.rect.move(self.ax, self.ay)
+        self.rect = self.rect.move(self.vx, self.vy)
 
 
 class Ship(pygame.sprite.Sprite):
@@ -71,12 +72,11 @@ class Ship(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = pos_x
         self.rect.y = pos_y
-        self.x = 0
-        self.y = 0
-        self.ax = 0
-        self.ay = 0
+        self.vx = 0
+        self.vy = 0
         self.angle = 0
         self.hp = 500
+        self.timer = 0
 
     def update(self, events):
         if events[pygame.K_w]:
@@ -104,14 +104,12 @@ class Ship(pygame.sprite.Sprite):
         self.image.set_colorkey(-1)
 
     def speeding(self):
-        self.ax += 1 * cos(radians(self.angle))
-        self.ay -= 1 * sin(radians(self.angle))
-        if self.ax < -25 or self.ax > 25:
-            self.ax -= 1 * cos(radians(self.angle))
-        if self.ay < -25 or self.ay > 25:
-            self.ay += 1 * sin(radians(self.angle))
-        self.x = self.ax * abs(cos(radians(self.angle)))
-        self.y = self.ay * abs(sin(radians(self.angle)))
+        self.vx += cos(radians(self.angle))
+        self.vy -= sin(radians(self.angle))
+        if abs(self.vx) > 30:
+            self.vx -= cos(radians(self.angle))
+        if abs(self.vy) > 30:
+            self.vy += sin(radians(self.angle))
 
     def moving(self):
         if self.rect.x > width - self.ship_width // 2:
@@ -122,28 +120,44 @@ class Ship(pygame.sprite.Sprite):
             self.rect.y = 0 - self.ship_height // 2
         elif self.rect.y < -self.ship_height // 2:
             self.rect.y = height - self.ship_height // 2
-        self.rect = self.rect.move(self.x, self.y)
+        self.rect = self.rect.move(self.vx, self.vy)
+        self.timer += 1
 
     def laser_shot(self, file_name, *group):
-        pos_x = self.rect.x + self.ship_width / 2
-        pos_y = self.rect.y + self.ship_height / 2
-        Laser(pos_x, pos_y, file_name, self.angle, *group)
-        self.hp -= 1
+        if self.timer > 3:
+            pos_x = self.rect.x + self.ship_width / 2
+            pos_y = self.rect.y + self.ship_height / 2
+            Laser(pos_x, pos_y, file_name, self.angle, *group)
+            self.hp -= 1
+            laser_shot.play()
+            self.timer = 0
 
 
 pygame.init()
 FPS = 24
 size = width, height = 1270, 900
+game_over_tracks = ['data/game_over1.mp3', 'data/laser3.mp3', 'data/game_over2.mp3', 'data/game_over4.mp3',
+                    'data/game_over2.mp3']
+files_with_tracks = ['data/track1.mp3', 'data/track3.mp3', 'data/track2.mp3', 'data/track4.mp3']
+random.shuffle(files_with_tracks)
+track_index = 0
+laser_shot = pygame.mixer.Sound('data/laser1.mp3')
+laser_shot.set_volume(0.1)
+END_MUSIC_EVENT = pygame.USEREVENT + 1
+track_channel = pygame.mixer.find_channel()
+track = pygame.mixer.Sound(files_with_tracks[track_index])
+track_channel.set_endevent(END_MUSIC_EVENT)
+track_channel.play(track, fade_ms=5000)
+
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 all_ships = pygame.sprite.Group()
 lasers = pygame.sprite.Group()
 background = load_image('screen2.jpg', width, height)
-
 line_spacing = 25
 upper_margin = 40
-write_text('Бойцы! Чтобы защитится от космических отак, их надо понять.', upper_margin)
+write_text('Бойцы! Чтобы защитится от космических атак, их надо понять.', upper_margin)
 write_text('Так что находи себе партнёра, и добро пожаловать в тренировочную симуляцию комического боя.',
            upper_margin + line_spacing * 1)
 write_text('Здесь вы научитесь управлять кораблём, эффиктивно уничтожать врага и тактике космических боёв.',
@@ -164,19 +178,23 @@ write_text(
     'Так как обычно поле боя окружено пространственным барьером, который телепортирует тебя от одного края к другому,',
     upper_margin + line_spacing * 12)
 write_text(
-    'чтобы противники не смогли сбежать, в нашей симуляции действует точно такая же система. Включай это в свою тактику!',
+    'чтобы противники не смогли сбежать, в нашей симуляции действует точно такая же система. Включай это в свою '
+    'тактику!',
     upper_margin + line_spacing * 13)
 write_text(
-    'Полёт снарядов действует по такой же схеме, однако помни, что снаряды - энергетические, а значит и не бесконечные.',
+    'Полёт снарядов действует по такой же схеме, однако помни, что снаряды - энергетические, '
+    'а значит и не бесконечные.',
     upper_margin + line_spacing * 14)
 write_text(
-    'Это значит, что каждый выстрел отнимает энергию корабля, а если её не будет, то он взорвётся из-за детонации двигателя',
+    'Это значит, что каждый выстрел отнимает энергию корабля, а если её не будет, то он взорвётся из-за детонации '
+    'двигателя',
     upper_margin + line_spacing * 15)
 write_text('Поддержка щита тоже нуждается в энергии, так что старайся уворачиваться по максимому.',
            upper_margin + line_spacing * 16)
 write_text('Запомни всего энергии - 500, выстрел - -1 энергии, а попадание - -20.', upper_margin + line_spacing * 17)
 write_text(
-    'Также есть несколько особенных направлений, попадая в которые корабль либо под силой тяги резко устремляется назад,',
+    'Также есть несколько особенных направлений, попадая в которые корабль либо под силой тяги резко устремляется '
+    'назад,',
     upper_margin + line_spacing * 18)
 write_text('либо просто убирая накопленный кораблём импульс. Пользуйся этим с умом.', upper_margin + line_spacing * 19)
 write_text('Ну это всё, что тебе надо знать, так что нажимай "F", и на старт!', upper_margin + line_spacing * 20)
@@ -187,6 +205,7 @@ running = False
 FLAG = True
 i = 0
 while running_menu:
+    #track_channel.pause()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running_menu = False
@@ -198,13 +217,18 @@ while running_menu:
             sprite.kill()
         first_ship = Ship(50, height / 2, 'ship_1.png', all_sprites, all_ships)
         second_ship = Ship(width - 50, height / 2, 'ship_2.png', all_sprites, all_ships)
-
         second_ship.reverse(180)
         all_sprites.add(first_ship)
         running = True
         FLAG = True
+        #track_channel.unpause()
     while running:
         for event in pygame.event.get():
+            if event.type == END_MUSIC_EVENT and event.code == 0:
+                track_index += 1
+                if track_index >= len(files_with_tracks):
+                    track_index = 0
+                track_channel.play(pygame.mixer.Sound(files_with_tracks[track_index]), fade_ms=10000)
             if event.type == pygame.QUIT:
                 running = False
                 running_menu = False
@@ -232,8 +256,8 @@ while running_menu:
             FLAG = False
         if not FLAG:
             running = False
+            pygame.mixer.Sound(random.choice(game_over_tracks)).play()
         all_sprites.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
-
 pygame.quit()
