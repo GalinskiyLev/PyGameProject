@@ -51,12 +51,12 @@ class Laser(pygame.sprite.Sprite):
         self.image.set_colorkey(-1)
         self.rect = self.image.get_rect()
         self.angle = angle
-        self.rect.x = pos_x  # + self.width * cos(radians(self.angle))
-        self.rect.y = pos_y  # + self.height * sin(radians(self.angle))
+        self.rect.x = pos_x + self.width * cos(radians(self.angle))
+        self.rect.y = pos_y - self.height * sin(radians(self.angle))
         self.image = pygame.transform.rotate(self.image, self.angle + 180)
         self.image.set_colorkey(-1)
-        self.ax = 70 * cos(radians(self.angle))
-        self.ay = 70 * -sin(radians(self.angle))
+        self.ax = 60 * cos(radians(self.angle))
+        self.ay = 60 * -sin(radians(self.angle))
         self.timer = 0
 
     def moving(self):
@@ -92,6 +92,24 @@ class Ship(pygame.sprite.Sprite):
         self.angle = 0
         self.hp = 500
 
+    def update(self, events):
+        if events[pygame.K_w]:
+            first_ship.speeding()
+        if events[pygame.K_a]:
+            first_ship.reverse(10)
+        if events[pygame.K_d]:
+            first_ship.reverse(-10)
+        if events[pygame.K_x]:
+            first_ship.laser_shot('laser3.png', all_sprites, lasers)
+        if events[pygame.K_UP]:
+            second_ship.speeding()
+        if events[pygame.K_LEFT]:
+            second_ship.reverse(10)
+        if events[pygame.K_RIGHT]:
+            second_ship.reverse(-10)
+        if events[pygame.K_SPACE]:
+            second_ship.laser_shot('laser4.png', all_sprites, lasers)
+
     def reverse(self, angle):
         self.angle += angle
         if self.angle == 360 or self.angle == -360:
@@ -99,7 +117,7 @@ class Ship(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.ship_image, self.angle)
         self.image.set_colorkey(-1)
 
-    def update(self):
+    def speeding(self):
         self.ax += 1 * cos(radians(self.angle))
         self.ay -= 1 * sin(radians(self.angle))
         if self.ax < -30 or self.ax > 30:
@@ -121,8 +139,11 @@ class Ship(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.x, self.y)
 
     def laser_shot(self, file_name, *group):
-        pos_x = self.rect.x + self.ship_width / 2
-        pos_y = self.rect.y + self.ship_height / 2
+        # pos_x = self.rect.x + self.ship_width / 2# + self.ship_width * cos(radians(self.angle))
+        # pos_y = self.rect.y + self.ship_height / 2# + self.ship_height * sin(radians(self.angle))
+        pos_x, pos_y = self.rect.center
+        pos_x += (self.ship_width / 2 - 20) * -cos(radians(self.angle))
+        pos_y += (self.ship_height / 2 - 20) * sin(radians(self.angle))
         Laser(pos_x, pos_y, file_name, self.angle, *group)
         self.hp -= 1
 
@@ -135,6 +156,7 @@ clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 all_ships = pygame.sprite.Group()
 lasers = pygame.sprite.Group()
+background = load_image('screen2.jpg', width, height)
 
 line_spacing = 25
 upper_margin = 40
@@ -191,7 +213,8 @@ while running_menu:
     if pygame.key.get_pressed()[pygame.K_f]:
         for sprite in all_sprites:
             sprite.kill()
-        screen.fill(pygame.Color('white'))
+        # screen.fill(pygame.Color('white'))
+        # screen.blit(background, (0, 0))
         first_ship = Ship(50, height / 2, 'ship_1.png', all_sprites, all_ships)
         second_ship = Ship(width - 50, height / 2, 'ship_2.png', all_sprites, all_ships)
 
@@ -205,8 +228,10 @@ while running_menu:
                 running = False
                 running_menu = False
         if FLAG:
+            first_ship.update(pygame.key.get_pressed())
+            '''second_ship.update(pygame.key.get_pressed())
             if pygame.key.get_pressed()[pygame.K_w]:
-                first_ship.update()
+                first_ship.speeding()
             if pygame.key.get_pressed()[pygame.K_a]:
                 first_ship.reverse(10)
             if pygame.key.get_pressed()[pygame.K_d]:
@@ -216,18 +241,20 @@ while running_menu:
             if pygame.key.get_pressed()[pygame.K_SPACE]:
                 second_ship.laser_shot('laser4.png', all_sprites, lasers)
             if pygame.key.get_pressed()[pygame.K_UP]:
-                second_ship.update()
+                second_ship.speeding()
             if pygame.key.get_pressed()[pygame.K_LEFT]:
                 second_ship.reverse(10)
             if pygame.key.get_pressed()[pygame.K_RIGHT]:
-                second_ship.reverse(-10)
-            screen.fill(pygame.Color('white'))
+                second_ship.reverse(-10)'''
+            # screen.fill(pygame.Color('white'))
+            screen.blit(background, (0, 0))
             for sprite in all_sprites:
                 sprite.moving()
         for ship in all_ships:
             if pygame.sprite.spritecollideany(ship, lasers, collided=None):
                 pygame.sprite.spritecollideany(ship, lasers, collided=None).kill()
                 ship.hp -= 20
+                L = 1
             if ship.hp <= 0:
                 ship.kill()
         draw_word(first_ship.hp, True)
@@ -244,12 +271,9 @@ while running_menu:
             draw_word('Победа 1 игрока', 2)
             FLAG = False
         if not FLAG:
-
             running = False
         all_sprites.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
-        print(i)
-        i += 1
 
 pygame.quit()
