@@ -51,12 +51,12 @@ class Laser(pygame.sprite.Sprite):
         self.image.set_colorkey(-1)
         self.rect = self.image.get_rect()
         self.angle = angle
-        self.rect.x = pos_x + self.width * cos(radians(self.angle))
-        self.rect.y = pos_y - self.height * sin(radians(self.angle))
+        self.rect.x = pos_x  # + self.width * cos(radians(self.angle))
+        self.rect.y = pos_y  # + self.height * sin(radians(self.angle))
         self.image = pygame.transform.rotate(self.image, self.angle + 180)
         self.image.set_colorkey(-1)
-        self.ax = 60 * cos(radians(self.angle))
-        self.ay = 60 * -sin(radians(self.angle))
+        self.ax = 70 * cos(radians(self.angle))
+        self.ay = 70 * -sin(radians(self.angle))
         self.timer = 0
 
     def moving(self):
@@ -101,14 +101,14 @@ class Ship(pygame.sprite.Sprite):
             first_ship.reverse(-10)
         if events[pygame.K_x]:
             first_ship.laser_shot('laser3.png', all_sprites, lasers)
+        if events[pygame.K_SPACE]:
+            second_ship.laser_shot('laser4.png', all_sprites, lasers)
         if events[pygame.K_UP]:
             second_ship.speeding()
         if events[pygame.K_LEFT]:
             second_ship.reverse(10)
         if events[pygame.K_RIGHT]:
             second_ship.reverse(-10)
-        if events[pygame.K_SPACE]:
-            second_ship.laser_shot('laser4.png', all_sprites, lasers)
 
     def reverse(self, angle):
         self.angle += angle
@@ -120,9 +120,9 @@ class Ship(pygame.sprite.Sprite):
     def speeding(self):
         self.ax += 1 * cos(radians(self.angle))
         self.ay -= 1 * sin(radians(self.angle))
-        if self.ax < -30 or self.ax > 30:
+        if self.ax < -25 or self.ax > 25:
             self.ax -= 1 * cos(radians(self.angle))
-        if self.ay < -30 or self.ay > 30:
+        if self.ay < -25 or self.ay > 25:
             self.ay += 1 * sin(radians(self.angle))
         self.x = self.ax * abs(cos(radians(self.angle)))
         self.y = self.ay * abs(sin(radians(self.angle)))
@@ -139,11 +139,8 @@ class Ship(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.x, self.y)
 
     def laser_shot(self, file_name, *group):
-        # pos_x = self.rect.x + self.ship_width / 2# + self.ship_width * cos(radians(self.angle))
-        # pos_y = self.rect.y + self.ship_height / 2# + self.ship_height * sin(radians(self.angle))
-        pos_x, pos_y = self.rect.center
-        pos_x += (self.ship_width / 2 - 20) * -cos(radians(self.angle))
-        pos_y += (self.ship_height / 2 - 20) * sin(radians(self.angle))
+        pos_x = self.rect.x + self.ship_width / 2 #+ self.ship_width * cos(radians(self.angle))
+        pos_y = self.rect.y + self.ship_height / 2 #+ self.ship_height * cos(radians(self.angle))
         Laser(pos_x, pos_y, file_name, self.angle, *group)
         self.hp -= 1
 
@@ -254,7 +251,6 @@ while running_menu:
             if pygame.sprite.spritecollideany(ship, lasers, collided=None):
                 pygame.sprite.spritecollideany(ship, lasers, collided=None).kill()
                 ship.hp -= 20
-                L = 1
             if ship.hp <= 0:
                 ship.kill()
         draw_word(first_ship.hp, True)
