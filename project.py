@@ -4,32 +4,18 @@ import sys
 from math import cos, sin, radians
 
 
-def write_text(message, y_pos, x_pos=0, flag=False, font_size=30):
+def write_text(message, y_pos, x_pos=0, frame=False, font_size=30, is_text_centered=True, color='green'):
     font = pygame.font.Font(None, font_size)
     text = font.render(message, True, (100, 255, 100))
-    least_with_texts = []
-
     text_w = text.get_width()
     text_h = text.get_height()
-    x_pos = (width - text.get_width()) // 2 + x_pos
+    x_pos -= text_w // 2
+    if is_text_centered:
+        x_pos = (width - text_w) // 2
+    y_pos -= text_h // 2
     screen.blit(text, (x_pos, y_pos))
-    if flag:
-        pygame.draw.rect(screen, (0, 255, 0), (x_pos, y_pos, text_w, text_h), 1)
-
-
-def draw_word(word, flag):
-    font = pygame.font.Font(None, 50)
-    text = font.render(str(word), True, (100, 255, 100))
-    text_w = text.get_width()
-    text_h = text.get_height()
-    if flag == 1:
-        x, y = 11, 11
-    elif flag == 2:
-        x, y = width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2
-    else:
-        x, y = width - text_w - 11, 11
-    screen.blit(text, (x, y))
-    pygame.draw.rect(screen, (0, 255, 0), (x - 10, y - 10, text_w + 20, text_h + 20), 1)
+    if frame:
+        pygame.draw.rect(screen, color, (x_pos - text_w * 0.1, y_pos - text_h * 0.1, text_w * 1.2, text_h * 1.2), 1)
 
 
 def load_image(name, w, h):
@@ -139,8 +125,8 @@ class Ship(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.x, self.y)
 
     def laser_shot(self, file_name, *group):
-        pos_x = self.rect.x + self.ship_width / 2 #+ self.ship_width * cos(radians(self.angle))
-        pos_y = self.rect.y + self.ship_height / 2 #+ self.ship_height * cos(radians(self.angle))
+        pos_x = self.rect.x + self.ship_width / 2
+        pos_y = self.rect.y + self.ship_height / 2
         Laser(pos_x, pos_y, file_name, self.angle, *group)
         self.hp -= 1
 
@@ -204,14 +190,12 @@ while running_menu:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running_menu = False
-    write_text('Press F to start', upper_margin + line_spacing * 24, 0, True, 222)
+    write_text('Press F to start', y_pos=upper_margin + line_spacing * 27, frame=True, font_size=222)
     pygame.display.flip()
     clock.tick(FPS)
     if pygame.key.get_pressed()[pygame.K_f]:
         for sprite in all_sprites:
             sprite.kill()
-        # screen.fill(pygame.Color('white'))
-        # screen.blit(background, (0, 0))
         first_ship = Ship(50, height / 2, 'ship_1.png', all_sprites, all_ships)
         second_ship = Ship(width - 50, height / 2, 'ship_2.png', all_sprites, all_ships)
 
@@ -226,24 +210,6 @@ while running_menu:
                 running_menu = False
         if FLAG:
             first_ship.update(pygame.key.get_pressed())
-            '''second_ship.update(pygame.key.get_pressed())
-            if pygame.key.get_pressed()[pygame.K_w]:
-                first_ship.speeding()
-            if pygame.key.get_pressed()[pygame.K_a]:
-                first_ship.reverse(10)
-            if pygame.key.get_pressed()[pygame.K_d]:
-                first_ship.reverse(-10)
-            if pygame.key.get_pressed()[pygame.K_x]:
-                first_ship.laser_shot('laser3.png', all_sprites, lasers)
-            if pygame.key.get_pressed()[pygame.K_SPACE]:
-                second_ship.laser_shot('laser4.png', all_sprites, lasers)
-            if pygame.key.get_pressed()[pygame.K_UP]:
-                second_ship.speeding()
-            if pygame.key.get_pressed()[pygame.K_LEFT]:
-                second_ship.reverse(10)
-            if pygame.key.get_pressed()[pygame.K_RIGHT]:
-                second_ship.reverse(-10)'''
-            # screen.fill(pygame.Color('white'))
             screen.blit(background, (0, 0))
             for sprite in all_sprites:
                 sprite.moving()
@@ -253,18 +219,16 @@ while running_menu:
                 ship.hp -= 20
             if ship.hp <= 0:
                 ship.kill()
-        draw_word(first_ship.hp, True)
-        draw_word(second_ship.hp, False)
-        # first_ship.moving()
-        # second_ship.moving()
+        write_text(str(first_ship.hp), 40, x_pos=width * 0.25, is_text_centered=False, frame=True, font_size=70)
+        write_text(str(second_ship.hp), 40, x_pos=width * 0.75, is_text_centered=False, frame=True, font_size=70)
         if not first_ship.alive() and not second_ship.alive():
-            draw_word('Ничья', 2)
+            write_text('Ничья', y_pos=height/2, x_pos=width/2, frame=True, font_size=100)
             FLAG = False
         elif not first_ship.alive():
-            draw_word('Победа 2 игрока', 2)
+            write_text('Победа 2 игрока', y_pos=height / 2, x_pos=width / 2, frame=True, font_size=100)
             FLAG = False
         elif not second_ship.alive():
-            draw_word('Победа 1 игрока', 2)
+            write_text('Победа 1 игрока', y_pos=height / 2, x_pos=width / 2, frame=True, font_size=100)
             FLAG = False
         if not FLAG:
             running = False
